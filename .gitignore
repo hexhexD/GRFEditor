@@ -1,0 +1,48 @@
+# Visual Studio local state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build outputs
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# .NET restore/cache outputs
+project.lock.json
+project.assets.json
+*.nuget.g.props
+*.nuget.g.targets
+packages/
+
+# Test and coverage outputs
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.cache
+
+# ReSharper/Rider local state
+_ReSharper*/
+*.DotSettings.user
+.idea/
+
+# OS/editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*.swo
