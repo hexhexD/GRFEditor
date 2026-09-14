@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Utilities.Extension;
 
 namespace GRF.FileFormats.LubFormat {
@@ -20,7 +21,7 @@ namespace GRF.FileFormats.LubFormat {
 
 		public static bool IsControl(string line) {
 			var l = NoIndent(line);
-			return l.StartsWith("if ") || l.StartsWith("for ") || l.StartsWith("while ");
+			return l.StartsWith("if ", StringComparison.Ordinal) || l.StartsWith("for ", StringComparison.Ordinal) || l.StartsWith("while ", StringComparison.Ordinal);
 		}
 
 		/// <summary>
@@ -63,21 +64,36 @@ namespace GRF.FileFormats.LubFormat {
 
 		public static int GetLineIndexContains(List<string> lines, string toFind, int startIndex) {
 			for (int i = startIndex; i < lines.Count; i++) {
-				if (lines[i].Contains(" function(")) {
-					int end = 1;
+				if (lines[i].IndexOf(" function(", StringComparison.Ordinal) > -1) {
+					int endNesting = 1;
 					i++;
 
 					for (; i < lines.Count; i++) {
-						if (lines[i].Contains("\tend") || lines[i] == "end")
-							end--;
-						else if (
-							lines[i].Contains("\tfor ") ||
-							lines[i].Contains("\tif ") ||
-							lines[i].Contains("\twhile "))
-							end++;
+						var line = lines[i];
+						int lineStartIndex = 0;
 
-						if (end <= 0)
+						while (lineStartIndex < line.Length && line[lineStartIndex] == '\t') lineStartIndex++;
+
+						if (lineStartIndex == 0 && line.Equals("end", StringComparison.Ordinal))
+							endNesting--;
+						else if (lineStartIndex > 0) {
+							if (StartsWithOrdinal(line, lineStartIndex, "end"))
+								endNesting--;
+							else if (
+								StartsWithOrdinal(line, lineStartIndex, "end") ||
+								StartsWithOrdinal(line, lineStartIndex, "if") ||
+								StartsWithOrdinal(line, lineStartIndex, "while"))
+								endNesting++;
+						}
+
+						if (endNesting <= 0) {
+							i++;
+
+							if (i >= lines.Count)
+								return -1;
+
 							break;
+						}
 					}
 				}
 
@@ -96,9 +112,17 @@ namespace GRF.FileFormats.LubFormat {
 			return -1;
 		}
 
+		public static bool StartsWithOrdinal(string source, int offset, string value) {
+			if (source.Length - offset < value.Length) return false;
+			for (int i = 0; i < value.Length; i++) {
+				if (source[offset + i] != value[i]) return false;
+			}
+			return true;
+		}
+
 		public static int GetLineIndexEndsWith(List<string> lines, string toFind, int startIndex) {
 			for (int i = startIndex; i < lines.Count; i++) {
-				if (lines[i].EndsWith(toFind))
+				if (lines[i].EndsWith(toFind, StringComparison.Ordinal))
 					return i;
 			}
 
@@ -113,7 +137,7 @@ namespace GRF.FileFormats.LubFormat {
 		///   <c>true</c> if the specified line is empty; otherwise, <c>false</c>.
 		/// </returns>
 		public static bool IsEmpty(string line) {
-			return line == "" || line.EndsWith("\t");
+			return line == "" || line.EndsWith("\t", StringComparison.Ordinal);
 		}
 
 		/// <summary>
@@ -125,7 +149,18 @@ namespace GRF.FileFormats.LubFormat {
 		///   <c>true</c> if the specified line starts with the value; otherwise, <c>false</c>.
 		/// </returns>
 		public static bool IsStart(string line, string value) {
-			return NoIndent(line).StartsWith(value);
+			int i = 0;
+
+			while (i < line.Length && line[i] == '\t')
+				i++;
+
+			if (line.Length - i < value.Length) return false;
+			for (int j = 0; j < value.Length; j++) {
+				if (value[j] != line[j + i])
+					return false;
+			}
+
+			return true;
 		}
 
 		/// <summary>
@@ -167,24 +202,8 @@ namespace GRF.FileFormats.LubFormat {
 			return replacedLines;
 		}
 
-		private static readonly Dictionary<int, string> _indents = new Dictionary<int, string>();
-
 		public static string GenerateIndent(int indent) {
-			if (indent > 0) {
-				string toRet = "";
-
-				if (_indents.TryGetValue(indent, out toRet)) {
-					return toRet;
-				}
-
-				for (int i = 0; i < indent; i++)
-					toRet += "\t";
-
-				_indents[indent] = toRet;
-				return toRet;
-			}
-
-			return "";
+			return ExtensionMethods.GetIndentString(indent);
 		}
 
 		public static string GetLabelFromGoto(string line) {

@@ -53,10 +53,11 @@ namespace GRF.FileFormats.LubFormat {
 				MaxStackSize = reader.Byte();
 
 				int sizeCode = reader.Int32();
-				List<OpCodes.AbstractInstruction> instructions = new List<OpCodes.AbstractInstruction>();
+				OpCodes.AbstractInstruction[] instructions = new OpCodes.AbstractInstruction[sizeCode];
+				var codeInstructions = reader.ArrayInt32(sizeCode);
 
 				for (int i = 0; i < sizeCode; i++) {
-					instructions.Add(OpcodeMapper.GetInstruction(reader.Bytes(4), _decompiler.Header.InstructionSet, decompiler));
+					instructions[i] = OpcodeMapper.GetInstruction(codeInstructions[i], _decompiler.Header.InstructionSet, decompiler);
 				}
 
 				int constantsSize = reader.Int32();
@@ -144,10 +145,11 @@ namespace GRF.FileFormats.LubFormat {
 
 				int sizeCode = reader.Int32();
 
-				List<OpCodes.AbstractInstruction> instructions = new List<OpCodes.AbstractInstruction>();
+				OpCodes.AbstractInstruction[] instructions = new OpCodes.AbstractInstruction[sizeCode];
+				var codeInstructions = reader.ArrayInt32(sizeCode);
 
 				for (int i = 0; i < sizeCode; i++) {
-					instructions.Add(OpcodeMapper.GetInstruction(reader.Bytes(4), _decompiler.Header.InstructionSet, decompiler));
+					instructions[i] = OpcodeMapper.GetInstruction(codeInstructions[i], _decompiler.Header.InstructionSet, decompiler);
 				}
 
 				Instructions = instructions;
@@ -184,7 +186,7 @@ namespace GRF.FileFormats.LubFormat {
 			set { _functions = value; }
 		}
 
-		public List<OpCodes.AbstractInstruction> Instructions { get; set; }
+		public OpCodes.AbstractInstruction[] Instructions;
 		public int FunctionLevel { get; set; }
 
 		public int BaseIndent {

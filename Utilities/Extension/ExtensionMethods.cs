@@ -731,21 +731,18 @@ namespace Utilities.Extension {
 			}
 		}
 
-		private static readonly Dictionary<int, string> _indentations = new Dictionary<int, string>();
+		private static readonly string[] _indentCache = Enumerable.Range(0, 32)
+			.Select(i => new string('\t', i))
+			.ToArray();
+
+		public static string GetIndentString(int indentLevel) {
+			if (indentLevel < 0) return string.Empty;
+			if (indentLevel >= _indentCache.Length) return new string('\t', indentLevel);
+			return _indentCache[indentLevel];
+		}
 
 		public static void AppendIndent(this StringBuilder builder, int level) {
-			if (_indentations.ContainsKey(level)) {
-				builder.Append(_indentations[level]);
-				return;
-			}
-
-			string val = "";
-			for (int i = 0; i < level; i++) {
-				val += '\t';
-			}
-			_indentations[level] = val;
-
-			builder.Append(val);
+			builder.Append(GetIndentString(level));
 		}
 
 		public static int Indent(this StringBuilder builder) {

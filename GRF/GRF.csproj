@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="FileFormats\LubFormat - Copy\**" />
+    <EmbeddedResource Remove="FileFormats\LubFormat - Copy\**" />
+    <None Remove="FileFormats\LubFormat - Copy\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Graphics\TkVector3 - Copy.cs" />
     <Compile Remove="Image\GrfColor - Copy.cs" />
   </ItemGroup>

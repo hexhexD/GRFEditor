@@ -30,7 +30,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 				try {
 					function.Stack.Push();
 
-					for (; pc < function.Instructions.Count; pc++) {
+					for (; pc < function.Instructions.Length; pc++) {
 						if (PC_Start == pc && (pc == analyser.PC_End || pc == analyser.NonAssign_PC_End)) {
 							if (!analyser.Assign) {
 								Result = new LubBoolean(pc == analyser.NonAssign_PC_End);
@@ -64,11 +64,11 @@ namespace GRF.FileFormats.LubFormat.VM {
 							break;
 						}
 
-						if ((pos = ShouldAssign(function, pc)) != null) {
+						if (ShouldAssign(function, pc, out pos)) {
 							if (analyser.Result.Var == null)
 								analyser.Result.Var = pos;
-							else if (analyser.Result.Var != pos)
-								throw new Exception("ConditionNode: Assigning different variables for inline conditional statement");
+							//else if (analyser.Result.Var.Value != pos)
+							//	throw new Exception("ConditionNode: Assigning different variables for inline conditional statement");
 
 							Result = GetKey(RegOutput(pos.StackIndex, function));
 							Statement = new RelationalStatement(Result.ToString());

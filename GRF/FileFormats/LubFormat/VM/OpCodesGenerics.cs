@@ -39,9 +39,9 @@ namespace GRF.FileFormats.LubFormat.VM {
 				// all the values get assigned.
 				if (Registers[2] != 1) {
 					if (Registers[2] > 2) {
-						var assignVar = ShouldAssign(function, function.PC + 1);
+						//var assignVar = ShouldAssign(function, function.PC + 1);
 
-						if (assignVar != null && assignVar.IsLocalAssign(function.PC + 1, function)) {
+						if (ShouldAssign(function, function.PC + 1, out VarPosition assignVar) && assignVar.IsLocalAssign(function.PC + 1, function)) {
 							builder.AppendIndent(function.BaseIndent);
 							Append = true;
 							assign = true;
@@ -53,12 +53,11 @@ namespace GRF.FileFormats.LubFormat.VM {
 							var stackData = function.StackResolver.Fetch(function.PC + 1, function);
 
 							for (int i = 0; i < stackData.Count; i++) {
-								var data = stackData[i];
+								ref var data = ref stackData.Results[i];
 								var local = data.Debug_LocalVariable;
 
-								if (!data.IsParameter &&
-								    !data.IsLoopControl &&
-								    !function.IsVariableInstantiated(data.Debug_Index)) {
+								if ((data.Flags & (LoopFlag.Parameter | LoopFlag.LoopControl)) == 0 &&
+									!function.IsVariableInstantiated(data.Debug_Index)) {
 									builder.Append(local.Key);
 									toAssignCount--;
 									function.Stack[data.StackIndex] = local;

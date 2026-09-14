@@ -18,12 +18,12 @@ namespace GRF.FileFormats.LubFormat.Core {
 			// aren't set up yet.
 			for (int i = 0; i < lines.Count; i++) {
 				try {
-					if (lines[i].StartsWith("::") || i == 0) {
+					if (lines[i].StartsWith("::", StringComparison.Ordinal) || i == 0) {
 						int fragmentEnd = lines.Count - 2;
 						int fragmentStart = i;
 
 						for (i = i + 1; i < lines.Count; i++) {
-							if (lines[i].StartsWith("::")) {
+							if (lines[i].StartsWith("::", StringComparison.Ordinal)) {
 								fragmentEnd = i - 1;
 								i--;
 								break;
@@ -32,17 +32,17 @@ namespace GRF.FileFormats.LubFormat.Core {
 
 						for (int j = fragmentStart + 1; j < fragmentEnd; j++) {
 							// Not pure!
-							if (lines[j].Contains(" function(")) {
+							if (lines[j].IndexOf(" function(", StringComparison.Ordinal) > -1) {
 								int end = 1;
 								j++;
 
 								for (; j < lines.Count; j++) {
-									if (lines[j].Contains("\tend") || lines[j] == "end")
+									if (lines[j].IndexOf("\tend", StringComparison.Ordinal) > -1 || lines[j].Equals("end", StringComparison.Ordinal))
 										end--;
 									else if (
-										lines[j].Contains("\tfor ") ||
-										lines[j].Contains("\tif ") ||
-										lines[j].Contains("\twhile "))
+										lines[j].IndexOf("\tfor ", StringComparison.Ordinal) > -1 ||
+										lines[j].IndexOf("\tif ", StringComparison.Ordinal) > -1 ||
+										lines[j].IndexOf("\twhile ", StringComparison.Ordinal) > -1)
 										end++;
 
 									if (end <= 0)
@@ -56,7 +56,7 @@ namespace GRF.FileFormats.LubFormat.Core {
 							if ((j >= fragmentStart + 2 && LineHelper.IsIf(lines[j])) || (j > fragmentStart + 2 && LineHelper.IsControl(lines[j]))) {
 								string newLabel = "e_[" + String.Format("9{0:0000}", splitCounter++) + "]";
 
-								if (lines[fragmentStart].StartsWith("::")) {
+								if (lines[fragmentStart].StartsWith("::", StringComparison.Ordinal)) {
 									newLabel = "e_" + lines[fragmentStart].Replace("::", "").Split('_')[1];
 								}
 

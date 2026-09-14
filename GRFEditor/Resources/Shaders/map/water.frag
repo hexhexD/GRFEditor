@@ -7,6 +7,7 @@ uniform sampler2D s_texture;
 
 uniform vec4 colorWater;
 uniform int colorMode = 0;
+uniform float alpha = 0.564;
 
 void main()
 {
@@ -15,7 +16,7 @@ void main()
 	}
 	else {
 		vec4 color = texture2D(s_texture, texCoord); 
-		color.a = 0.564;
+		color.a = alpha;
 		fragColor = color;
 	}
 }

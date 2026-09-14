@@ -154,13 +154,13 @@ namespace GRF.FileFormats.LubFormat.Core.CodeReconstructor {
 			for (int i = 1; i < Content.Lines.Count; i++) {
 				string line = LineHelper.NoIndent(Content.Lines[i]);
 
-				if (line.StartsWith("if "))
+				if (line.StartsWith("if ", StringComparison.Ordinal))
 					break;
 
-				if (line.StartsWith("return"))
+				if (line.StartsWith("return", StringComparison.Ordinal))
 					break;
 
-				if (line.StartsWith("goto "))
+				if (line.StartsWith("goto ", StringComparison.Ordinal))
 					break;
 
 				if (i == Content.Lines.Count - 1) {
@@ -226,7 +226,7 @@ namespace GRF.FileFormats.LubFormat.Core.CodeReconstructor {
 					references[i].Print(builder, function, data, level + LineHelper.GetIndent(lines[i]) - data.BaseIndentDiff);
 				}
 				else {
-					if (i != 0 || !lines[i].StartsWith("function(")) {
+					if (i != 0 || !lines[i].StartsWith("function(", StringComparison.Ordinal)) {
 						builder.AppendIndent(level);
 					}
 
@@ -273,7 +273,7 @@ namespace GRF.FileFormats.LubFormat.Core.CodeReconstructor {
 			string label = Content.GetGotoLabel(token);
 			if (label == null)
 				return null;
-			return ChildReferences.FirstOrDefault(p => p.Content.Label == label);
+			return ChildReferences.FirstOrDefault(p => String.Equals(p.Content.Label, label, StringComparison.Ordinal));
 		}
 		#endregion
 
@@ -606,7 +606,7 @@ namespace GRF.FileFormats.LubFormat.Core.CodeReconstructor {
 		}
 
 		public bool IsPureReturn() {
-			return IsReturn && LineHelper.NoIndent(Content.Lines[Content.Lines.Count - 1]) == "return";
+			return IsReturn && LineHelper.NoIndent(Content.Lines[Content.Lines.Count - 1]).Equals("return", StringComparison.Ordinal);
 		}
 
 		public void RemoveLogicalReturnExecution() {

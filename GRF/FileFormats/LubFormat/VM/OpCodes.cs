@@ -12,7 +12,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 		public abstract class AbstractInstruction {
 			protected EncodedMode Mode;
 			protected LubValueType _dump1;
-			public List<int> Registers { get; set; }
+			public int[] Registers;
 
 			public bool Append { get; set; }
 			public string LuaCode { get; set; }
@@ -126,7 +126,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 								if (pos != null) {
 									function.Stack.Pop();
 									popStack = false;
-									function.Stack[pos.StackIndex] = new LubOutput(analyser.Statement.ToString());
+									function.Stack[pos.Value.StackIndex] = new LubOutput(analyser.Statement.ToString());
 									function.PC -= 2;
 								}
 							}

@@ -90,22 +90,22 @@ namespace GRF.FileFormats.LubFormat {
 			SignRemoval = ((1 << (header.SizeOfB + header.SizeOfC - 1)) - 1);
 		}
 
-		public int SizeOfOp { get; internal set; }
-		public int SizeOfA { get; internal set; }
-		public int SizeOfB { get; internal set; }
-		public int SizeOfC { get; internal set; }
+		public int SizeOfOp;
+		public int SizeOfA;
+		public int SizeOfB;
+		public int SizeOfC;
 
-		public int LocationRegisterA { get; set; }
-		public int LocationRegisterB { get; set; }
-		public int LocationRegisterC { get; set; }
+		public int LocationRegisterA;
+		public int LocationRegisterB;
+		public int LocationRegisterC;
 
-		public int ShiftRegisterA { get; set; }
-		public int ShiftRegisterB { get; set; }
-		public int ShiftRegisterC { get; set; }
+		public int ShiftRegisterA;
+		public int ShiftRegisterB;
+		public int ShiftRegisterC;
 
-		public int SignRemoval { get; set; }
+		public int SignRemoval;
 
-		public int LocationRegister { get; set; }
+		public int LocationRegister;
 
 		protected LubHeader _header { get; set; }
 
@@ -113,7 +113,7 @@ namespace GRF.FileFormats.LubFormat {
 			return (instruction >> shiftRight) & ((1 << length) - 1);
 		}
 
-		public abstract List<int> GetResiters(int instruction, EncodedMode mode);
+		public abstract int[] GetResiters(int instruction, EncodedMode mode);
 	}
 
 	public class OperandCodeReader50 : OperandCodeReader {
@@ -127,29 +127,31 @@ namespace GRF.FileFormats.LubFormat {
 			ShiftRegisterC = 32 - header.SizeOfC - LocationRegisterC;
 		}
 
-		public override List<int> GetResiters(int instruction, EncodedMode mode) {
-			List<int> registers = new List<int>();
-
-			switch(mode) {
+		public override int[] GetResiters(int instruction, EncodedMode mode) {
+			switch (mode) {
 				case EncodedMode.ABC:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterB, _header.SizeOfB, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfC, instruction));
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterB, _header.SizeOfB, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfC, instruction)
+					};
 				case EncodedMode.ABx:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction));
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction)
+					};
 				case EncodedMode.AsBx:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval);
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval
+					};
 				case EncodedMode.SBx:
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval);
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval
+					};
 			}
 
-			return registers;
+			return new int[0];
 		}
 	}
 
@@ -165,29 +167,31 @@ namespace GRF.FileFormats.LubFormat {
 			ShiftRegisterC = 32 - header.SizeOfC - LocationRegisterC;
 		}
 
-		public override List<int> GetResiters(int instruction, EncodedMode mode) {
-			List<int> registers = new List<int>();
-
-			switch(mode) {
+		public override int[] GetResiters(int instruction, EncodedMode mode) {
+			switch (mode) {
 				case EncodedMode.ABC:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterB, _header.SizeOfB, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfC, instruction));
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterB, _header.SizeOfB, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfC, instruction)
+					};
 				case EncodedMode.ABx:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction));
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction)
+					};
 				case EncodedMode.AsBx:
-					registers.Add(_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction));
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval);
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterA, _header.SizeOfA, instruction),
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval
+					};
 				case EncodedMode.SBx:
-					registers.Add(_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval);
-					break;
+					return new int[] {
+						_getUnsignedValue(ShiftRegisterC, _header.SizeOfB + _header.SizeOfC, instruction) - SignRemoval
+					};
 			}
 
-			return registers;
+			return new int[0];
 		}
 	}
 }

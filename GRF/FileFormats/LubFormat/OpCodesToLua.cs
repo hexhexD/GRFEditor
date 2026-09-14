@@ -117,6 +117,8 @@ namespace GRF.FileFormats.LubFormat {
 				_appendEnd(builder);
 			}
 
+			function.StackResolver.Clear();
+
 			if (Settings.LubDecompilerSettings.UseCodeReconstructor)
 				return Analyse(function, builder.ToString(), decompiler, addIndent);
 
@@ -129,7 +131,7 @@ namespace GRF.FileFormats.LubFormat {
 			_generateBlocksAndWhileLoops(function);
 
 			function.PC = 0;
-			for (; function.PC < function.Instructions.Count; function.PC++) {
+			for (; function.PC < function.Instructions.Length; function.PC++) {
 				int pc = function.PC;
 
 				if (function.Label == 14 && pc == 81) {
@@ -184,7 +186,7 @@ namespace GRF.FileFormats.LubFormat {
 			function.PC = 0;
 			// We start by registering each jumps from the instructions
 			// This will simplify labels
-			for (; function.PC < function.Instructions.Count; function.PC++) {
+			for (; function.PC < function.Instructions.Length; function.PC++) {
 				OpCodes.AbstractInstruction ins = function.Instructions[function.PC];
 
 				if (ins is OpCodes.IJumpingInstruction) {

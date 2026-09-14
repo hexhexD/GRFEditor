@@ -104,17 +104,17 @@ namespace GRF.FileFormats.LubFormat.VM {
 				builder.Append("_[");
 				builder.Append(gotoIf);
 				builder.AppendLine("]");
-
+				
 				builder.AppendIndent(function.BaseIndent);
 				builder.AppendLine("else");
-
+				
 				builder.AppendIndent(function.BaseIndent + 1);
 				builder.Append("goto ");
 				builder.Append(function.Label);
 				builder.Append("_[");
 				builder.Append(gotoElse);
 				builder.AppendLine("]");
-
+				
 				builder.AppendIndent(function.BaseIndent);
 				builder.AppendLine("end");
 			}

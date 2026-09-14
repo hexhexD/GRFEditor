@@ -214,11 +214,19 @@ namespace GRF.IO {
 			return (_data[0 + _offset] << 24) + (_data[1 + _offset] << 16) + (_data[2 + _offset] << 8) + _data[3 + _offset];
 		}
 
-		public int[] ArrayInt32(int count) {
-			int[] array = new int[count];
+		public unsafe int[] ArrayInt32(int count) {
+			if (count == 1)
+				return new int[1] { Int32() };
 
-			for (int i = 0; i < count; i++) {
-				array[i] = Int32();
+			int[] array = new int[count];
+			int length = count * 4;
+			_forward(length);
+			if (_offset + length > _data.Length)
+				throw new IndexOutOfRangeException();
+
+			fixed (int* pDst = array)
+			fixed (byte* p = &_data[_offset]) {
+				Buffer.MemoryCopy(p, pDst, length, length);
 			}
 
 			return array;

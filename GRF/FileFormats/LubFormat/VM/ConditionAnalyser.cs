@@ -6,18 +6,18 @@ using GRF.FileFormats.LubFormat.Types;
 namespace GRF.FileFormats.LubFormat.VM {
 	public partial class OpCodes {
 		public class CodeAnalyser {
-			public int PC_Start { get; set; }
-			public int PC_End { get; set; }
-			public int NonAssign_PC_End { get; set; }
-			public RelationalStatement Statement { get; set; }
-			public bool Assign { get; set; }
+			public int PC_Start;
+			public int PC_End;
+			public int NonAssign_PC_End;
+			public RelationalStatement Statement;
+			public bool Assign;
 
 			public class AnalyserResult {
 				public int PC_End = -1;
 				public int StackIndex = -1;
 				public ILubObject Previous;
 				public ILubObject Current;
-				public VarPosition Var { get; set; }
+				public VarPosition? Var;
 			};
 
 			public AnalyserResult Result = new AnalyserResult();
@@ -56,7 +56,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 					//whileLoop = true;
 				}
 
-				for (; pc < function.Instructions.Count; pc++) {
+				for (; pc < function.Instructions.Length; pc++) {
 					if (pc == PC_End)
 						break;
 
@@ -100,7 +100,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 							break;
 						}
 
-						if (ins is LoadBool && pc + 1 < function.Instructions.Count && function.Instructions[pc + 1] is LoadBool) {
+						if (ins is LoadBool && pc + 1 < function.Instructions.Length && function.Instructions[pc + 1] is LoadBool) {
 							if (PC_End == -1)
 								PC_End = pc + 2;
 							break;

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using GRF.FileFormats.LubFormat.Types;
@@ -18,7 +19,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 			_toIgnore.Add("(for step)", 0);
 		}
 
-		public static void AppendParameters(string functionName, StringBuilder builder, List<int> registers, LubFunction function) {
+		public static void AppendParameters(string functionName, StringBuilder builder, int[] registers, LubFunction function) {
 			builder.Append("(");
 
 			if (registers[1] == 1) {
@@ -185,13 +186,6 @@ namespace GRF.FileFormats.LubFormat.VM {
 		public static ILubObject RegOrKOutput(int value, LubFunction function) {
 			ILubObject acces = RegOrK(value, function);
 
-			//if (value >= function.Decompiler.Header.ConstantIndexor) {
-			//	acces = function.Constants[value - function.Decompiler.Header.ConstantIndexor];
-			//}
-			//else {
-			//	acces = function.Stack[value];
-			//}
-
 			LubValueType accessor = acces as LubValueType;
 
 			if (accessor != null) {
@@ -224,45 +218,52 @@ namespace GRF.FileFormats.LubFormat.VM {
 			return value is LubReferenceType ? ((LubReferenceType)value).Key as T : (T)value;
 		}
 
-		public static VarPosition ShouldAssign(LubFunction function, int pc) {
+		public static bool ShouldAssign(LubFunction function, int pc, out VarPosition result) {
 			// Check both local and global
 			var stackData = function.StackResolver.Fetch(pc, function);
 
 			for (int i = 0; i < stackData.Count; i++) {
-				var data = stackData[i];
+				ref var data = ref stackData.Results[i];
 				var local = data.Debug_LocalVariable;
 
-				if (!data.IsParameter &&
-				    !data.IsLoopControl &&
+				if ((data.Flags & (LoopFlag.Parameter | LoopFlag.LoopControl)) == 0 &&
 				    !function.IsVariableInstantiated(data.Debug_Index)) {
-					return data;
+					result = data;
+					return true;
 				}
 
 				// Only assign if dumping block variables
 				if (_shouldAssign(local, function, data)) {
-					return data;
+					result = data;
+					return true;
 				}
 			}
 
-			return null;
+			result = default;
+			return false;
 		}
 
-		public class VarPosition {
-			public int Debug_Index { get; set; }
-			public int StackIndex { get; set; }
-			public int LocalOffset { get; set; }
-			public bool IsLoopControl { get; set; }
-			public bool IsLoopIterator { get; set; }
-			public bool IsParameter { get; set; }
-			public bool IsLoopAssignFirst { get; set; }
-			public int LoopLength { get; set; }
-			public bool LoopAssigned { get; set; }
+		[Flags]
+		public enum LoopFlag {
+			LoopControl = 1 << 0,
+			LoopIterator = 1 << 1,
+			Parameter = 1 << 2,
+			LoopAssignFirst = 1 << 3,
+			LoopAssigned = 1 << 4,
+		}
+
+		public struct VarPosition {
+			public int Debug_Index;
+			public int StackIndex;
+			public int LocalOffset;
+			public int LoopLength;
+			public LoopFlag Flags;
 
 			public LubReferenceType Debug_LocalVariable;
 
 			public bool IsLocalAssign(int pc, LubFunction function) {
-				return !IsParameter &&
-				       !IsLoopControl &&
+				return !Flags.HasFlag(LoopFlag.Parameter) &&
+				       !Flags.HasFlag(LoopFlag.LoopControl) &&
 				       !function.IsVariableInstantiated(Debug_Index);
 			}
 
@@ -271,87 +272,139 @@ namespace GRF.FileFormats.LubFormat.VM {
 			}
 		}
 
+		private static int _fetchCalls;
+		private static int _cachedCalls;
+		private static int _varPosCreated;
+		private static int _listCreated;
+		private static int _emptyReturns;
+		private static int _unusedVarPositionsList;
+
+		public class StackResolverList {
+			public readonly VarPosition[] Results;
+			public readonly int Count;
+
+			public StackResolverList(VarPosition[] results, int count) {
+				Results = results;
+				Count = count;
+			}
+
+			public static StackResolverList Empty = new StackResolverList(new VarPosition[0], 0);
+		}
+
 		public class StackResolver {
-			private readonly Dictionary<int, List<VarPosition>> _s = new Dictionary<int, List<VarPosition>>();
+			private readonly Dictionary<int, StackResolverList> _s = new Dictionary<int, StackResolverList>();
 
-			public List<VarPosition> Fetch(int pc, LubFunction function) {
-				if (!_s.ContainsKey(pc)) {
-					List<VarPosition> l = new List<VarPosition>();
-					_s[pc] = l;
-					int localOffset = 0;
+			public StackResolverList Fetch(int pc, LubFunction function) {
+				_fetchCalls++;
+				StackResolverList l;
 
-					for (int i = 0; i < function.Debug_LocalVariables.Count && function.Debug_LocalVariables[i].StartLine <= pc; i++) {
-						LubReferenceType local = function.Debug_LocalVariables[i];
-
-						if (!function.Debug_LocalVariables[i].IsValid(pc)) {
-							localOffset++;
-							continue;
-						}
-
-						var lInfo = LoopInfo.GetLoopInfo(function, local.Key.Value);
-
-						if (lInfo != null) {
-							for (int j = 0; j < -lInfo.Start; j++) {
-								l.RemoveAt(l.Count - 1);
-							}
-
-							i += lInfo.Start;
-							int itStart = -1;
-
-							for (int j = 0; j < lInfo.Length; j++, i++, itStart--) {
-								if (j == lInfo.IteratorsStart)
-									itStart = lInfo.IteratorsLength;
-
-								l.Add(new VarPosition {
-									Debug_Index = i,
-									Debug_LocalVariable = function.Debug_LocalVariables[i],
-									StackIndex = i - localOffset,
-									LocalOffset = localOffset,
-									IsLoopControl = true,
-									IsLoopIterator = itStart > 0,
-									IsLoopAssignFirst = j == 0,
-									LoopLength = lInfo.Length,
-									IsParameter = i < function.NumberOfParametersWithArg
-								});
-							}
-
-							i--;
-							continue;
-						}
-
-						l.Add(new VarPosition { Debug_Index = i, Debug_LocalVariable = local, StackIndex = i - localOffset, LocalOffset = localOffset, IsLoopControl = false, IsLoopIterator = false, IsParameter = i < function.NumberOfParametersWithArg });
-					}
+				if (function.Debug_LocalVariables.Count == 0) {
+					_emptyReturns++;
+					return StackResolverList.Empty;
 				}
 
-				return _s[pc];
+				if (_s.TryGetValue(pc, out l)) {
+					_cachedCalls++;
+					return l;
+				}
+
+				VarPosition[] results = new VarPosition[function.Debug_LocalVariables.Count];
+				int count = 0;
+
+				int localOffset = 0;
+
+				for (int i = 0; i < function.Debug_LocalVariables.Count && function.Debug_LocalVariables[i].StartLine <= pc; i++) {
+					LubReferenceType local = function.Debug_LocalVariables[i];
+
+					if (!local.IsValid(pc)) {
+						localOffset++;
+						continue;
+					}
+
+					var lInfo = LoopInfo.GetLoopInfo(function, local.Key.Value);
+
+					if (lInfo != null) {
+						for (int j = 0; j < -lInfo.Start; j++) {
+							count--;
+						}
+
+						i += lInfo.Start;
+						int itStart = -1;
+
+						for (int j = 0; j < lInfo.Length; j++, i++, itStart--) {
+							if (j == lInfo.IteratorsStart)
+								itStart = lInfo.IteratorsLength;
+
+							results[count++] = new VarPosition {
+								Debug_Index = i,
+								Debug_LocalVariable = function.Debug_LocalVariables[i],
+								StackIndex = i - localOffset,
+								LocalOffset = localOffset,
+								Flags = LoopFlag.LoopControl | (itStart > 0 ? LoopFlag.LoopIterator : 0) | (j == 0 ? LoopFlag.LoopAssignFirst : 0) | (i < function.NumberOfParametersWithArg ? LoopFlag.Parameter : 0),
+								LoopLength = lInfo.Length,
+							};
+							_varPosCreated++;
+						}
+
+						i--;
+						continue;
+					}
+
+					results[count++] = new VarPosition { Debug_Index = i, Debug_LocalVariable = local, StackIndex = i - localOffset, LocalOffset = localOffset, Flags = (i < function.NumberOfParametersWithArg ? LoopFlag.Parameter : 0) };
+					_varPosCreated++;
+				}
+
+				if (count <= 0) {
+					l = StackResolverList.Empty;
+				}
+				else {
+					l = new StackResolverList(results, count);
+					_unusedVarPositionsList += results.Length - count;
+					_listCreated++;
+				}
+
+				_s[pc] = l;
+				return l;
+			}
+
+			public void Clear() {
+				_s.Clear();
 			}
 		}
 
 		public sealed class LoopInfo {
-			public int Length { get; set; }
-			public int IteratorsLength { get; set; }
-			public int IteratorsStart { get; set; }
-			public int Start { get; set; }
+			public readonly int Length;
+			public readonly int IteratorsLength;
+			public readonly int IteratorsStart;
+			public readonly int Start;
 
-			public static LoopInfo NumericFor_501 = new LoopInfo { Length = 4, IteratorsStart = 2, IteratorsLength = 2, Start = 0 };
-			public static LoopInfo GenericFor_501 = new LoopInfo { Length = 5, IteratorsStart = 3, IteratorsLength = 2, Start = 0 };
+			// Private constructor forces usage of the static instances
+			private LoopInfo(int length, int iteratorsStart, int iteratorsLength, int start) {
+				Length = length;
+				IteratorsStart = iteratorsStart;
+				IteratorsLength = iteratorsLength;
+				Start = start;
+			}
 
-			public static LoopInfo NumericFor_500 = new LoopInfo { Length = 3, IteratorsStart = 0, IteratorsLength = 1, Start = -1 };
-			public static LoopInfo GenericFor_500 = new LoopInfo { Length = 4, IteratorsStart = 2, IteratorsLength = 2, Start = 0 };
+			public readonly static LoopInfo NumericFor_501 = new LoopInfo(4, 2, 2, 0);
+			public readonly static LoopInfo GenericFor_501 = new LoopInfo(5, 3, 2, 0);
+
+			public readonly static LoopInfo NumericFor_500 = new LoopInfo(3, 0, 1, -1);
+			public readonly static LoopInfo GenericFor_500 = new LoopInfo(4, 2, 2, 0);
 
 			public static LoopInfo GetLoopInfo(LubFunction function, string value) {
 				if (function._decompiler.Header.Version >= 5.1) {
-					if (value == "(for generator)")
+					if (string.Equals(value, "(for generator)", StringComparison.Ordinal))
 						return GenericFor_501;
-					if (value == "(for index)")
+					if (string.Equals(value, "(for index)", StringComparison.Ordinal))
 						return NumericFor_501;
 				}
 				else {
-					if (value == "(for generator)")
+					if (string.Equals(value, "(for generator)", StringComparison.Ordinal))
 						return GenericFor_500;
-					if (value == "(for index)")
+					if (string.Equals(value, "(for index)", StringComparison.Ordinal))
 						return NumericFor_500;
-					if (value == "(for limit)")
+					if (string.Equals(value, "(for limit)", StringComparison.Ordinal))
 						return NumericFor_500;
 				}
 
@@ -364,15 +417,15 @@ namespace GRF.FileFormats.LubFormat.VM {
 			var stackData = function.StackResolver.Fetch(pc, function);
 
 			for (int i = 0; i < stackData.Count; i++) {
-				var data = stackData[i];
+				ref var data = ref stackData.Results[i];
 				var local = data.Debug_LocalVariable;
 
-				if (!data.LoopAssigned) {
-					if (data.IsLoopAssignFirst) {
+				if ((data.Flags & LoopFlag.LoopAssigned) == 0) {
+					if ((data.Flags & LoopFlag.LoopAssignFirst) != 0) {
 						AssignLoopVariables(builder, function, data);
 					}
 
-					data.LoopAssigned = true;
+					data.Flags |= LoopFlag.LoopAssigned;
 				}
 
 				int stackIndex = data.StackIndex;
@@ -442,10 +495,10 @@ namespace GRF.FileFormats.LubFormat.VM {
 			var stackData = function.StackResolver.Fetch(pc, function);
 
 			for (int i = function.NumberOfParametersWithArg; i < stackData.Count; i++) {
-				var data = stackData[i];
+				ref var data = ref stackData.Results[i];
 				var local = data.Debug_LocalVariable;
 
-				if (data.IsLoopControl)
+				if ((data.Flags & LoopFlag.LoopControl) != 0)
 					continue;
 
 				if (function.PC >= local.StartLine

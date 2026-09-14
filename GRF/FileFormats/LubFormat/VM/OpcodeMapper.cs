@@ -87,9 +87,7 @@ namespace GRF.FileFormats.LubFormat.VM {
 
 		public static readonly Dictionary<string, List<Func<OpCodes.AbstractInstruction>>> InstructionSets = new Dictionary<string, List<Func<OpCodes.AbstractInstruction>>>();
 
-		public static OpCodes.AbstractInstruction GetInstruction(byte[] codeByteData, List<Func<OpCodes.AbstractInstruction>> instructionSet, Lub decompiler) {
-			int codeInt = BitConverter.ToInt32(codeByteData, 0);
-
+		public static OpCodes.AbstractInstruction GetInstruction(int codeInt, List<Func<OpCodes.AbstractInstruction>> instructionSet, Lub decompiler) {
 			int opcode = codeInt & 0x3f;
 
 			if (opcode >= instructionSet.Count) {

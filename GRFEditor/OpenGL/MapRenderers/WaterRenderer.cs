@@ -11,6 +11,7 @@ using Utilities.Services;
 
 namespace GRFEditor.OpenGL.MapRenderers {
 	public class WaterRenderer : Renderer {
+		public const float WaterAlpha = 0.564f;
 		private readonly RendererLoadRequest _request;
 		private readonly Gnd _gnd;
 		private readonly WaterData _water;
@@ -133,6 +134,7 @@ namespace GRFEditor.OpenGL.MapRenderers {
 					Shader.SetFloat("amplitude", _water.Zones[0].WaveHeight);
 					Shader.SetFloat("waveSpeed", _water.Zones[0].WaveSpeed);
 					Shader.SetFloat("wavePitch", _water.Zones[0].WavePitch);
+					Shader.SetFloat("alpha", _water.Zones[0].Type == 4 ? 1f : WaterAlpha);
 				}
 
 				_watch.Start();
@@ -161,6 +163,7 @@ namespace GRFEditor.OpenGL.MapRenderers {
 						Shader.SetFloat("amplitude", _water.Zones[0].WaveHeight);
 						Shader.SetFloat("waveSpeed", _water.Zones[0].WaveSpeed);
 						Shader.SetFloat("wavePitch", _water.Zones[0].WavePitch);
+						Shader.SetFloat("alpha", _water.Zones[0].Type == 4 ? 1f : WaterAlpha);
 					}
 				}
 
@@ -199,6 +202,7 @@ namespace GRFEditor.OpenGL.MapRenderers {
 						Shader.SetFloat("amplitude", _water.Zones[i].WaveHeight);
 						Shader.SetFloat("waveSpeed", _water.Zones[i].WaveSpeed);
 						Shader.SetFloat("wavePitch", _water.Zones[i].WavePitch);
+						Shader.SetFloat("alpha", _water.Zones[i].Type == 4 ? 1f : WaterAlpha);
 					}
 
 					int offset = 32 * i;
